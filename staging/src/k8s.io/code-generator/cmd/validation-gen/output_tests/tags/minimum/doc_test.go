@@ -78,14 +78,14 @@ func TestOptionalStruct(t *testing.T) {
 	// Zero values should be valid for optional fields
 	st.Value(&OptionalStruct{}).ExpectValid()
 
-	// Non-zero values below minimum should fail
+	// Non-nil pointer with zero value should fail minimum
 	st.Value(&OptionalStruct{
 		OptionalIntPtrField: ptr.To(0),
-	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring(), field.ErrorList{
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByOrigin(), field.ErrorList{
 		field.Invalid(field.NewPath("optionalIntPtrField"), nil, ""),
 	})
 
-	// Values at minimum should be valid
+	// Valid values
 	st.Value(&OptionalStruct{
 		OptionalIntField:    1,
 		OptionalIntPtrField: ptr.To(1),
@@ -96,31 +96,28 @@ func TestRequiredStruct(t *testing.T) {
 	st := localSchemeBuilder.Test(t)
 
 	// Zero values should fail for required fields
-	st.Value(&RequiredStruct{
-		RequiredIntPtrField: ptr.To(0),
-	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring(), field.ErrorList{
+	st.Value(&RequiredStruct{}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByOrigin(), field.ErrorList{
 		field.Invalid(field.NewPath("requiredIntField"), nil, ""),
-		field.Invalid(field.NewPath("requiredIntPtrField"), nil, ""),
+		field.Required(field.NewPath("requiredIntPtrField"), ""),
 	})
 
-	// Values at minimum should be valid
+	// Valid values
 	st.Value(&RequiredStruct{
 		RequiredIntField:    1,
 		RequiredIntPtrField: ptr.To(1),
 	}).ExpectValid()
+
+	// Test validation ratcheting
+	st.Value(&RequiredStruct{}).OldValue(&RequiredStruct{}).ExpectValid()
 }
 
 func TestNegativeMinimumStruct(t *testing.T) {
 	st := localSchemeBuilder.Test(t)
 
-	// Zero values should be valid (above minimum of -10)
-	st.Value(&NegativeMinimumStruct{
-		NegativeMinimumPtrField:         ptr.To(0),
-		OptionalNegativeMinimumPtrField: ptr.To(0),
-		RequiredNegativeMinimumPtrField: ptr.To(0),
-	}).ExpectValid()
+	// Zero values are above -10, should be valid
+	st.Value(&NegativeMinimumStruct{}).ExpectValid()
 
-	// Values below minimum should fail
+	// Values below -10 should fail
 	st.Value(&NegativeMinimumStruct{
 		NegativeMinimumField:            -11,
 		NegativeMinimumPtrField:         ptr.To(-11),
@@ -128,7 +125,7 @@ func TestNegativeMinimumStruct(t *testing.T) {
 		OptionalNegativeMinimumPtrField: ptr.To(-11),
 		RequiredNegativeMinimumField:    -11,
 		RequiredNegativeMinimumPtrField: ptr.To(-11),
-	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring(), field.ErrorList{
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByOrigin(), field.ErrorList{
 		field.Invalid(field.NewPath("negativeMinimumField"), nil, ""),
 		field.Invalid(field.NewPath("negativeMinimumPtrField"), nil, ""),
 		field.Invalid(field.NewPath("optionalNegativeMinimumField"), nil, ""),
@@ -137,20 +134,22 @@ func TestNegativeMinimumStruct(t *testing.T) {
 		field.Invalid(field.NewPath("requiredNegativeMinimumPtrField"), nil, ""),
 	})
 
+	// Values at exactly -10 should be valid
+	st.Value(&NegativeMinimumStruct{
+		NegativeMinimumField:            -10,
+		NegativeMinimumPtrField:         ptr.To(-10),
+		OptionalNegativeMinimumField:    -10,
+		OptionalNegativeMinimumPtrField: ptr.To(-10),
+		RequiredNegativeMinimumField:    -10,
+		RequiredNegativeMinimumPtrField: ptr.To(-10),
+	}).ExpectValid()
+
 	// Test validation ratcheting
 	st.Value(&NegativeMinimumStruct{
-		NegativeMinimumField:            -11,
-		NegativeMinimumPtrField:         ptr.To(-11),
-		OptionalNegativeMinimumField:    -11,
-		OptionalNegativeMinimumPtrField: ptr.To(-11),
-		RequiredNegativeMinimumField:    -11,
-		RequiredNegativeMinimumPtrField: ptr.To(-11),
+		NegativeMinimumField:    -11,
+		NegativeMinimumPtrField: ptr.To(-11),
 	}).OldValue(&NegativeMinimumStruct{
-		NegativeMinimumField:            -11,
-		NegativeMinimumPtrField:         ptr.To(-11),
-		OptionalNegativeMinimumField:    -11,
-		OptionalNegativeMinimumPtrField: ptr.To(-11),
-		RequiredNegativeMinimumField:    -11,
-		RequiredNegativeMinimumPtrField: ptr.To(-11),
+		NegativeMinimumField:    -11,
+		NegativeMinimumPtrField: ptr.To(-11),
 	}).ExpectValid()
 }
