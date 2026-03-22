@@ -375,11 +375,14 @@ type Validations struct {
 }
 
 func (v *Validations) Empty() bool {
-	return v.Len() == 0
+	return !v.HasEmitable() &&
+		!v.OpaqueType &&
+		!v.OpaqueKeyType &&
+		!v.OpaqueValType
 }
 
-func (v *Validations) Len() int {
-	return len(v.Functions) + len(v.Variables) + len(v.Comments)
+func (v *Validations) HasEmitable() bool {
+	return len(v.Functions) > 0 || len(v.Variables) > 0 || len(v.Comments) > 0
 }
 
 func (v *Validations) AddFunction(fn FunctionGen) {
