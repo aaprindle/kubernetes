@@ -21,7 +21,10 @@ Conduct a daily code review of pull requests on the `kubernetes/kubernetes` repo
    - First priority: PRs authored by `lalitc375` or `yongruilin` (sorted most recent first)
    - Second priority: all other PRs (sorted most recent first)
 
-3. **Check for already-reviewed PRs** by searching for PRs on `aaprindle/kubernetes` with `[Review]` in the title. Skip any upstream PR that already has a corresponding review PR.
+3. **Check for already-reviewed PRs** by searching for PRs on `aaprindle/kubernetes` with `[Review]` in the title:
+   - Search for **open** review PRs: `search_pull_requests` with query `is:open repo:aaprindle/kubernetes [Review] in:title`
+   - Skip any upstream PR that has a corresponding **open** review PR (an active review already exists).
+   - If a corresponding review PR exists but is **closed**, treat the upstream PR as unreviewed and create a fresh review PR for it.
 
 4. **Select the top 3 unreviewed PRs** from the queue.
 
