@@ -74,4 +74,14 @@ func Test(t *testing.T) {
 		"mapOfStringToOpaqueStructField[a]": {"field Struct.MapOfStringToOpaqueStructField vals"},
 		"mapOfStringToOpaqueStructField[b]": {"field Struct.MapOfStringToOpaqueStructField vals"},
 	})
+
+	st.Value(&OpaqueFieldsStruct{
+		OtherStruct:               OtherStruct{"foo"},
+		OpaqueSliceField:          []OtherStruct{{"foo"}},
+		OpaqueMapField:            map[OtherString]OtherStruct{"a": {"foo"}},
+		TypedefOpaqueStructField:  TypedefOpaqueStruct{"foo"},
+		TypedefOpaqueSliceField:   []OtherStruct{{"foo"}},
+		TypedefOpaqueMapField:     map[OtherString]OtherStruct{"a": {"foo"}},
+		IsolatedOpaqueStructField: OtherStruct{"foo"},
+	}).ExpectValid()
 }
