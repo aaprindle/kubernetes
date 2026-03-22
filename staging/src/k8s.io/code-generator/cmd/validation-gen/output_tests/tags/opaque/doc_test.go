@@ -24,7 +24,9 @@ func Test(t *testing.T) {
 	st := localSchemeBuilder.Test(t)
 
 	st.Value(&Struct{
+		StructField:                    OtherStruct{},
 		StructPtrField:                 &OtherStruct{},
+		OpaqueStructField:              OtherStruct{},
 		OpaqueStructPtrField:           &OtherStruct{},
 		SliceOfStructField:             []OtherStruct{{}, {}},
 		SliceOfOpaqueStructField:       []OtherStruct{{}, {}},
