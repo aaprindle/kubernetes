@@ -57,12 +57,16 @@ type BasicStruct struct {
 	TypedefPtrField *IntType `json:"typedefPtrField"`
 }
 
+// +k8s:minimum=1
+type IntType int
+
 type OptionalStruct struct {
 	TypeMeta int
 
 	// +k8s:optional
 	// +k8s:minimum=1
 	OptionalIntField int `json:"optionalIntField"`
+
 	// +k8s:optional
 	// +k8s:minimum=1
 	OptionalIntPtrField *int `json:"optionalIntPtrField"`
@@ -74,6 +78,7 @@ type RequiredStruct struct {
 	// +k8s:required
 	// +k8s:minimum=1
 	RequiredIntField int `json:"requiredIntField"`
+
 	// +k8s:required
 	// +k8s:minimum=1
 	RequiredIntPtrField *int `json:"requiredIntPtrField"`
@@ -84,21 +89,23 @@ type NegativeMinimumStruct struct {
 
 	// +k8s:minimum=-10
 	NegativeMinimumField int `json:"negativeMinimumField"`
+
 	// +k8s:minimum=-10
 	NegativeMinimumPtrField *int `json:"negativeMinimumPtrField"`
+
 	// +k8s:optional
 	// +k8s:minimum=-10
 	OptionalNegativeMinimumField int `json:"optionalNegativeMinimumField"`
+
 	// +k8s:optional
 	// +k8s:minimum=-10
 	OptionalNegativeMinimumPtrField *int `json:"optionalNegativeMinimumPtrField"`
+
 	// +k8s:required
 	// +k8s:minimum=-10
 	RequiredNegativeMinimumField int `json:"requiredNegativeMinimumField"`
+
 	// +k8s:required
 	// +k8s:minimum=-10
 	RequiredNegativeMinimumPtrField *int `json:"requiredNegativeMinimumPtrField"`
 }
-
-// +k8s:minimum=1
-type IntType int

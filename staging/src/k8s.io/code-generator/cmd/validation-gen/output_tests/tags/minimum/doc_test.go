@@ -31,19 +31,19 @@ func TestBasicStruct(t *testing.T) {
 		IntPtrField:     ptr.To(0),
 		UintPtrField:    ptr.To(uint(0)),
 		TypedefPtrField: ptr.To(IntType(0)),
-	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring(), field.ErrorList{
-		field.Invalid(field.NewPath("intField"), nil, ""),
-		field.Invalid(field.NewPath("intPtrField"), nil, ""),
-		field.Invalid(field.NewPath("int16Field"), nil, ""),
-		field.Invalid(field.NewPath("int32Field"), nil, ""),
-		field.Invalid(field.NewPath("int64Field"), nil, ""),
-		field.Invalid(field.NewPath("uintField"), nil, ""),
-		field.Invalid(field.NewPath("uintPtrField"), nil, ""),
-		field.Invalid(field.NewPath("uint16Field"), nil, ""),
-		field.Invalid(field.NewPath("uint32Field"), nil, ""),
-		field.Invalid(field.NewPath("uint64Field"), nil, ""),
-		field.Invalid(field.NewPath("typedefField"), nil, ""),
-		field.Invalid(field.NewPath("typedefPtrField"), nil, ""),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Invalid(field.NewPath("intField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("intPtrField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("int16Field"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("int32Field"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("int64Field"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("uintField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("uintPtrField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("uint16Field"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("uint32Field"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("uint64Field"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("typedefField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("typedefPtrField"), nil, "").WithOrigin("minimum"),
 	})
 	// Test validation ratcheting
 	st.Value(&BasicStruct{
@@ -75,66 +75,71 @@ func TestBasicStruct(t *testing.T) {
 func TestOptionalStruct(t *testing.T) {
 	st := localSchemeBuilder.Test(t)
 
-	// Zero values should be valid for optional fields
-	st.Value(&OptionalStruct{}).ExpectValid()
-
-	// Non-nil pointer with zero value should fail minimum
 	st.Value(&OptionalStruct{
 		OptionalIntPtrField: ptr.To(0),
-	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByOrigin(), field.ErrorList{
-		field.Invalid(field.NewPath("optionalIntPtrField"), nil, ""),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Invalid(field.NewPath("optionalIntPtrField"), nil, "").WithOrigin("minimum"),
 	})
 
-	// Valid values
 	st.Value(&OptionalStruct{
 		OptionalIntField:    1,
 		OptionalIntPtrField: ptr.To(1),
 	}).ExpectValid()
+
+	st.Value(&OptionalStruct{
+		OptionalIntField:    -1,
+		OptionalIntPtrField: ptr.To(-1),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Invalid(field.NewPath("optionalIntField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("optionalIntPtrField"), nil, "").WithOrigin("minimum"),
+	})
 }
 
 func TestRequiredStruct(t *testing.T) {
 	st := localSchemeBuilder.Test(t)
 
-	// Zero values should fail for required fields
-	st.Value(&RequiredStruct{}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByOrigin(), field.ErrorList{
-		field.Invalid(field.NewPath("requiredIntField"), nil, ""),
-		field.Required(field.NewPath("requiredIntPtrField"), ""),
+	st.Value(&RequiredStruct{
+		RequiredIntField:    0,
+		RequiredIntPtrField: ptr.To(0),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Required(field.NewPath("requiredIntField"), ""),
+		field.Invalid(field.NewPath("requiredIntPtrField"), nil, "").WithOrigin("minimum"),
 	})
 
-	// Valid values
+	st.Value(&RequiredStruct{
+		RequiredIntField:    0,
+		RequiredIntPtrField: ptr.To(0),
+	}).OldValue(&RequiredStruct{
+		RequiredIntField:    0,
+		RequiredIntPtrField: ptr.To(0),
+	}).ExpectValid()
+
 	st.Value(&RequiredStruct{
 		RequiredIntField:    1,
 		RequiredIntPtrField: ptr.To(1),
 	}).ExpectValid()
 
-	// Test validation ratcheting
-	st.Value(&RequiredStruct{}).OldValue(&RequiredStruct{}).ExpectValid()
+	st.Value(&RequiredStruct{
+		RequiredIntField:    -1,
+		RequiredIntPtrField: ptr.To(-1),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Invalid(field.NewPath("requiredIntField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("requiredIntPtrField"), nil, "").WithOrigin("minimum"),
+	})
 }
 
 func TestNegativeMinimumStruct(t *testing.T) {
 	st := localSchemeBuilder.Test(t)
 
-	// Zero values are above -10, should be valid
-	st.Value(&NegativeMinimumStruct{}).ExpectValid()
-
-	// Values below -10 should fail
 	st.Value(&NegativeMinimumStruct{
-		NegativeMinimumField:            -11,
-		NegativeMinimumPtrField:         ptr.To(-11),
-		OptionalNegativeMinimumField:    -11,
-		OptionalNegativeMinimumPtrField: ptr.To(-11),
-		RequiredNegativeMinimumField:    -11,
-		RequiredNegativeMinimumPtrField: ptr.To(-11),
-	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByOrigin(), field.ErrorList{
-		field.Invalid(field.NewPath("negativeMinimumField"), nil, ""),
-		field.Invalid(field.NewPath("negativeMinimumPtrField"), nil, ""),
-		field.Invalid(field.NewPath("optionalNegativeMinimumField"), nil, ""),
-		field.Invalid(field.NewPath("optionalNegativeMinimumPtrField"), nil, ""),
-		field.Invalid(field.NewPath("requiredNegativeMinimumField"), nil, ""),
-		field.Invalid(field.NewPath("requiredNegativeMinimumPtrField"), nil, ""),
+		NegativeMinimumPtrField:         ptr.To(0),
+		OptionalNegativeMinimumPtrField: ptr.To(0),
+		RequiredNegativeMinimumField:    0,
+		RequiredNegativeMinimumPtrField: ptr.To(0),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Required(field.NewPath("requiredNegativeMinimumField"), ""),
 	})
 
-	// Values at exactly -10 should be valid
 	st.Value(&NegativeMinimumStruct{
 		NegativeMinimumField:            -10,
 		NegativeMinimumPtrField:         ptr.To(-10),
@@ -144,12 +149,19 @@ func TestNegativeMinimumStruct(t *testing.T) {
 		RequiredNegativeMinimumPtrField: ptr.To(-10),
 	}).ExpectValid()
 
-	// Test validation ratcheting
 	st.Value(&NegativeMinimumStruct{
-		NegativeMinimumField:    -11,
-		NegativeMinimumPtrField: ptr.To(-11),
-	}).OldValue(&NegativeMinimumStruct{
-		NegativeMinimumField:    -11,
-		NegativeMinimumPtrField: ptr.To(-11),
-	}).ExpectValid()
+		NegativeMinimumField:            -11,
+		NegativeMinimumPtrField:         ptr.To(-11),
+		OptionalNegativeMinimumField:    -11,
+		OptionalNegativeMinimumPtrField: ptr.To(-11),
+		RequiredNegativeMinimumField:    -11,
+		RequiredNegativeMinimumPtrField: ptr.To(-11),
+	}).ExpectMatches(field.ErrorMatcher{}.ByType().ByField().ByDetailSubstring().ByOrigin(), field.ErrorList{
+		field.Invalid(field.NewPath("negativeMinimumField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("negativeMinimumPtrField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("optionalNegativeMinimumField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("optionalNegativeMinimumPtrField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("requiredNegativeMinimumField"), nil, "").WithOrigin("minimum"),
+		field.Invalid(field.NewPath("requiredNegativeMinimumPtrField"), nil, "").WithOrigin("minimum"),
+	})
 }
