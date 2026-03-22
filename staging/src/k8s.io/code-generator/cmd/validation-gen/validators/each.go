@@ -107,7 +107,7 @@ func (evtv eachValTagValidator) GetValidations(context Context, tag codetags.Tag
 	if validations, err := evtv.validator.ExtractValidations(elemContext, *tag.ValueTag); err != nil {
 		return Validations{}, err
 	} else {
-		if validations.Empty() && !validations.OpaqueKeyType && !validations.OpaqueValType && !validations.OpaqueType {
+		if validations.Empty() {
 			return Validations{}, fmt.Errorf("no validation functions found")
 		}
 		if len(validations.Variables) > 0 {
