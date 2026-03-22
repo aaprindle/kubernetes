@@ -11,9 +11,11 @@ Conduct a daily code review of pull requests on the `kubernetes/kubernetes` repo
 
 ## PR Selection
 
-1. **Fetch open PRs** targeting `aaron-prindle` using the GitHub search API:
-   - `search_pull_requests` with query `is:open repo:kubernetes/kubernetes assignee:aaron-prindle`
-   - `search_pull_requests` with query `is:open repo:kubernetes/kubernetes reviewer:aaron-prindle`
+1. **Fetch open PRs** targeting `aaron-prindle` using the GitHub search API (only PRs updated in the last 14 days):
+   - `search_pull_requests` with query `is:open repo:kubernetes/kubernetes assignee:aaron-prindle updated:>={14_DAYS_AGO_YYYY-MM-DD}`
+   - `search_pull_requests` with query `is:open repo:kubernetes/kubernetes reviewer:aaron-prindle updated:>={14_DAYS_AGO_YYYY-MM-DD}`
+
+   Replace `{14_DAYS_AGO_YYYY-MM-DD}` with the actual date 14 days before today (e.g., if today is 2026-03-22, use `2026-03-08`).
 
 2. **Deduplicate and prioritize:**
    - First priority: PRs authored by `lalitc375` or `yongruilin` (sorted most recent first)
