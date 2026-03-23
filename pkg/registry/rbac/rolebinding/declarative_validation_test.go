@@ -103,3 +103,70 @@ func testDeclarativeValidateForDeclarative(t *testing.T, apiVersion string) {
 		})
 	}
 }
+
+func TestDeclarativeValidateUpdateForDeclarative(t *testing.T) {
+	for _, apiVersion := range apiVersions {
+		t.Run(apiVersion, func(t *testing.T) {
+			testDeclarativeValidateUpdateForDeclarative(t, apiVersion)
+		})
+	}
+}
+
+func testDeclarativeValidateUpdateForDeclarative(t *testing.T, apiVersion string) {
+	ctx := genericapirequest.WithRequestInfo(genericapirequest.NewDefaultContext(), &genericapirequest.RequestInfo{
+		APIGroup:   "rbac.authorization.k8s.io",
+		APIVersion: apiVersion,
+	})
+
+	validRoleBinding := rbac.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-binding", Namespace: "test-ns"},
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "reader",
+		},
+		Subjects: []rbac.Subject{
+			{Kind: rbac.UserKind, APIGroup: rbac.GroupName, Name: "user1"},
+		},
+	}
+
+	testCases := map[string]struct {
+		newObj       rbac.RoleBinding
+		oldObj       rbac.RoleBinding
+		expectedErrs field.ErrorList
+	}{
+		"no change to roleRef": {
+			newObj:       validRoleBinding,
+			oldObj:       validRoleBinding,
+			expectedErrs: field.ErrorList{},
+		},
+		"change roleRef.name": {
+			newObj: func() rbac.RoleBinding {
+				rb := validRoleBinding.DeepCopy()
+				rb.RoleRef.Name = "writer"
+				return *rb
+			}(),
+			oldObj: validRoleBinding,
+			expectedErrs: field.ErrorList{
+				field.Invalid(field.NewPath("roleRef"), nil, "").WithOrigin("immutable").MarkShortCircuitedInDV(),
+			},
+		},
+		"change roleRef.kind": {
+			newObj: func() rbac.RoleBinding {
+				rb := validRoleBinding.DeepCopy()
+				rb.RoleRef.Kind = "ClusterRole"
+				return *rb
+			}(),
+			oldObj: validRoleBinding,
+			expectedErrs: field.ErrorList{
+				field.Invalid(field.NewPath("roleRef"), nil, "").WithOrigin("immutable").MarkShortCircuitedInDV(),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			apitesting.VerifyUpdateValidationEquivalence(t, ctx, &tc.newObj, &tc.oldObj, Strategy.ValidateUpdate, tc.expectedErrs)
+		})
+	}
+}

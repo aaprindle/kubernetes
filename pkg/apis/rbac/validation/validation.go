@@ -17,11 +17,12 @@ limitations under the License.
 package validation
 
 import (
+	"k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/api/validation/path"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unversionedvalidation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/kubernetes/pkg/apis/core/validation"
+	corevalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 	"k8s.io/kubernetes/pkg/apis/rbac"
 )
 
@@ -35,7 +36,7 @@ func ValidateRBACName(name string, prefix bool) []string {
 
 func ValidateRole(role *rbac.Role) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validation.ValidateObjectMeta(&role.ObjectMeta, true, ValidateRBACName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMeta(&role.ObjectMeta, true, ValidateRBACName, field.NewPath("metadata"))...)
 
 	for i, rule := range role.Rules {
 		if err := ValidatePolicyRule(rule, true, field.NewPath("rules").Index(i)); err != nil {
@@ -50,7 +51,7 @@ func ValidateRole(role *rbac.Role) field.ErrorList {
 
 func ValidateRoleUpdate(role *rbac.Role, oldRole *rbac.Role) field.ErrorList {
 	allErrs := ValidateRole(role)
-	allErrs = append(allErrs, validation.ValidateObjectMetaUpdate(&role.ObjectMeta, &oldRole.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMetaUpdate(&role.ObjectMeta, &oldRole.ObjectMeta, field.NewPath("metadata"))...)
 
 	return allErrs
 }
@@ -61,7 +62,7 @@ type ClusterRoleValidationOptions struct {
 
 func ValidateClusterRole(role *rbac.ClusterRole, opts ClusterRoleValidationOptions) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validation.ValidateObjectMeta(&role.ObjectMeta, false, ValidateRBACName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMeta(&role.ObjectMeta, false, ValidateRBACName, field.NewPath("metadata"))...)
 
 	for i, rule := range role.Rules {
 		if err := ValidatePolicyRule(rule, false, field.NewPath("rules").Index(i)); err != nil {
@@ -94,7 +95,7 @@ func ValidateClusterRole(role *rbac.ClusterRole, opts ClusterRoleValidationOptio
 
 func ValidateClusterRoleUpdate(role *rbac.ClusterRole, oldRole *rbac.ClusterRole, opts ClusterRoleValidationOptions) field.ErrorList {
 	allErrs := ValidateClusterRole(role, opts)
-	allErrs = append(allErrs, validation.ValidateObjectMetaUpdate(&role.ObjectMeta, &oldRole.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMetaUpdate(&role.ObjectMeta, &oldRole.ObjectMeta, field.NewPath("metadata"))...)
 
 	return allErrs
 }
@@ -127,7 +128,7 @@ func ValidatePolicyRule(rule rbac.PolicyRule, isNamespaced bool, fldPath *field.
 
 func ValidateRoleBinding(roleBinding *rbac.RoleBinding) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validation.ValidateObjectMeta(&roleBinding.ObjectMeta, true, ValidateRBACName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMeta(&roleBinding.ObjectMeta, true, ValidateRBACName, field.NewPath("metadata"))...)
 
 	// TODO allow multiple API groups.  For now, restrict to one, but I can envision other experimental roles in other groups taking
 	// advantage of the binding infrastructure
@@ -138,8 +139,6 @@ func ValidateRoleBinding(roleBinding *rbac.RoleBinding) field.ErrorList {
 	switch roleBinding.RoleRef.Kind {
 	case "Role", "ClusterRole":
 	default:
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("roleRef", "kind"), roleBinding.RoleRef.Kind, []string{"Role", "ClusterRole"}))
-
 	}
 
 	if len(roleBinding.RoleRef.Name) == 0 {
@@ -160,18 +159,16 @@ func ValidateRoleBinding(roleBinding *rbac.RoleBinding) field.ErrorList {
 
 func ValidateRoleBindingUpdate(roleBinding *rbac.RoleBinding, oldRoleBinding *rbac.RoleBinding) field.ErrorList {
 	allErrs := ValidateRoleBinding(roleBinding)
-	allErrs = append(allErrs, validation.ValidateObjectMetaUpdate(&roleBinding.ObjectMeta, &oldRoleBinding.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMetaUpdate(&roleBinding.ObjectMeta, &oldRoleBinding.ObjectMeta, field.NewPath("metadata"))...)
 
-	if oldRoleBinding.RoleRef != roleBinding.RoleRef {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("roleRef"), roleBinding.RoleRef, "cannot change roleRef"))
-	}
+	allErrs = append(allErrs, validation.ValidateImmutableField(roleBinding.RoleRef, oldRoleBinding.RoleRef, field.NewPath("roleRef")).WithOrigin("immutable").MarkAlpha().MarkCoveredByDeclarative()...)
 
 	return allErrs
 }
 
 func ValidateClusterRoleBinding(roleBinding *rbac.ClusterRoleBinding) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validation.ValidateObjectMeta(&roleBinding.ObjectMeta, false, ValidateRBACName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMeta(&roleBinding.ObjectMeta, false, ValidateRBACName, field.NewPath("metadata"))...)
 
 	// TODO allow multiple API groups.  For now, restrict to one, but I can envision other experimental roles in other groups taking
 	// advantage of the binding infrastructure
@@ -182,8 +179,6 @@ func ValidateClusterRoleBinding(roleBinding *rbac.ClusterRoleBinding) field.Erro
 	switch roleBinding.RoleRef.Kind {
 	case "ClusterRole":
 	default:
-		allErrs = append(allErrs, field.NotSupported(field.NewPath("roleRef", "kind"), roleBinding.RoleRef.Kind, []string{"ClusterRole"}))
-
 	}
 
 	if len(roleBinding.RoleRef.Name) == 0 {
@@ -204,7 +199,7 @@ func ValidateClusterRoleBinding(roleBinding *rbac.ClusterRoleBinding) field.Erro
 
 func ValidateClusterRoleBindingUpdate(roleBinding *rbac.ClusterRoleBinding, oldRoleBinding *rbac.ClusterRoleBinding) field.ErrorList {
 	allErrs := ValidateClusterRoleBinding(roleBinding)
-	allErrs = append(allErrs, validation.ValidateObjectMetaUpdate(&roleBinding.ObjectMeta, &oldRoleBinding.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, corevalidation.ValidateObjectMetaUpdate(&roleBinding.ObjectMeta, &oldRoleBinding.ObjectMeta, field.NewPath("metadata"))...)
 
 	if oldRoleBinding.RoleRef != roleBinding.RoleRef {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("roleRef"), roleBinding.RoleRef, "cannot change roleRef"))
@@ -224,7 +219,7 @@ func ValidateRoleBindingSubject(subject rbac.Subject, isNamespaced bool, fldPath
 	switch subject.Kind {
 	case rbac.ServiceAccountKind:
 		if len(subject.Name) > 0 {
-			for _, msg := range validation.ValidateServiceAccountName(subject.Name, false) {
+			for _, msg := range corevalidation.ValidateServiceAccountName(subject.Name, false) {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), subject.Name, msg))
 			}
 		}

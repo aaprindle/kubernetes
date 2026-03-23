@@ -92,7 +92,7 @@ func (strategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) fie
 
 	allErrs := validation.ValidateRoleBindingUpdate(newRoleBinding, oldRoleBinding)
 
-	return rest.ValidateDeclarativelyWithMigrationChecks(ctx, legacyscheme.Scheme, newRoleBinding, oldRoleBinding, allErrs, operation.Update)
+	return rest.ValidateDeclarativelyWithMigrationChecks(ctx, legacyscheme.Scheme, newRoleBinding, oldRoleBinding, allErrs, operation.Update, rest.WithShortCircuitMismatch())
 }
 
 // WarningsOnUpdate returns warnings for the given update.
