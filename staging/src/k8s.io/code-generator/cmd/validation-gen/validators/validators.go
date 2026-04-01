@@ -372,6 +372,15 @@ type Validations struct {
 	// validated is opaque, and that any validations defined on it should not
 	// be emitted.
 	OpaqueValType bool
+
+	// Conditions wraps ALL validations in a condition check. When the
+	// conditions are met, normal validation functions run. When not met,
+	// FallbackFunctions run instead.
+	Conditions *Conditions
+
+	// FallbackFunctions are the validation functions to call when
+	// Conditions are not met.
+	FallbackFunctions []FunctionGen
 }
 
 func (v *Validations) Empty() bool {
@@ -379,7 +388,11 @@ func (v *Validations) Empty() bool {
 }
 
 func (v *Validations) Len() int {
-	return len(v.Functions) + len(v.Variables) + len(v.Comments)
+	n := len(v.Functions) + len(v.Variables) + len(v.Comments) + len(v.FallbackFunctions)
+	if v.Conditions != nil {
+		n++
+	}
+	return n
 }
 
 func (v *Validations) AddFunction(fn FunctionGen) {
@@ -401,6 +414,17 @@ func (v *Validations) Add(o Validations) {
 	v.OpaqueType = v.OpaqueType || o.OpaqueType
 	v.OpaqueKeyType = v.OpaqueKeyType || o.OpaqueKeyType
 	v.OpaqueValType = v.OpaqueValType || o.OpaqueValType
+	if o.Conditions != nil {
+		if v.Conditions == nil {
+			v.Conditions = o.Conditions
+		} else {
+			v.Conditions.OptionsEnabled = append(v.Conditions.OptionsEnabled, o.Conditions.OptionsEnabled...)
+			v.Conditions.OptionsDisabled = append(v.Conditions.OptionsDisabled, o.Conditions.OptionsDisabled...)
+		}
+	}
+	if len(v.FallbackFunctions) == 0 {
+		v.FallbackFunctions = o.FallbackFunctions
+	}
 }
 
 // FunctionFlags define optional properties of a validator.  Most validators
@@ -431,15 +455,19 @@ const (
 // Conditions defines what conditions must be true for a resource to be validated.
 // If any of the conditions are not true, the resource is not validated.
 type Conditions struct {
-	// OptionEnabled specifies an option name that must be set to true for the condition to be true.
-	OptionEnabled string
+	// OptionsEnabled specifies option names that must ALL be enabled for the
+	// condition to be true.
+	// Generated as: op.HasOption("A") && op.HasOption("B")
+	OptionsEnabled []string
 
-	// OptionDisabled specifies an option name that must be set to false for the condition to be true.
-	OptionDisabled string
+	// OptionsDisabled specifies option names that must ALL be disabled for
+	// the condition to be true.
+	// Generated as: !op.HasOption("A") && !op.HasOption("B")
+	OptionsDisabled []string
 }
 
 func (c Conditions) Empty() bool {
-	return len(c.OptionEnabled) == 0 && len(c.OptionDisabled) == 0
+	return len(c.OptionsEnabled) == 0 && len(c.OptionsDisabled) == 0
 }
 
 // Identifier is a name that the generator will output as an identifier.
