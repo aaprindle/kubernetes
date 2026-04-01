@@ -18,6 +18,7 @@ package validate
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -126,6 +127,57 @@ func TestMaxItems(t *testing.T) {
 					t.Errorf("wrong error\nexpected: %q\n     got: %v", tc.err, fmtErrs(result))
 				}
 			}
+		})
+	}
+}
+
+func TestMinProperties(t *testing.T) {
+	cases := []struct {
+		name     string
+		items    int
+		min      int
+		wantErrs field.ErrorList
+	}{{
+		name:  "0 items, min 0",
+		items: 0,
+		min:   0,
+	}, {
+		name:  "1 item, min 0",
+		items: 1,
+		min:   0,
+	}, {
+		name:  "1 item, min 1",
+		items: 1,
+		min:   1,
+	}, {
+		name:  "0 items, min 1",
+		items: 0,
+		min:   1,
+		wantErrs: field.ErrorList{
+			field.TooFew(field.NewPath("fldpath"), 0, 1).WithOrigin("minProperties"),
+		},
+	}, {
+		name:  "1 item, min 2",
+		items: 1,
+		min:   2,
+		wantErrs: field.ErrorList{
+			field.TooFew(field.NewPath("fldpath"), 1, 2).WithOrigin("minProperties"),
+		},
+	}, {
+		name:  "0 items, min -1",
+		items: 0,
+		min:   -1,
+	}}
+
+	matcher := field.ErrorMatcher{}.ByOrigin().ByDetailSubstring().ByField().ByType()
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			value := make(map[string]bool, tc.items)
+			for i := 0; i < tc.items; i++ {
+				value[fmt.Sprintf("k%d", i)] = true
+			}
+			gotErrs := MinProperties(context.Background(), operation.Operation{}, field.NewPath("fldpath"), value, nil, tc.min)
+			matcher.Test(t, tc.wantErrs, gotErrs)
 		})
 	}
 }
