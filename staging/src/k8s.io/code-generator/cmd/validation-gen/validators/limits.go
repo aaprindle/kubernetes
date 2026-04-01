@@ -27,13 +27,15 @@ import (
 )
 
 const (
-	maxItemsTagName  = "k8s:maxItems"
-	minimumTagName   = "k8s:minimum"
-	maxLengthTagName = "k8s:maxLength"
+	maxItemsTagName      = "k8s:maxItems"
+	minPropertiesTagName = "k8s:minProperties"
+	minimumTagName       = "k8s:minimum"
+	maxLengthTagName     = "k8s:maxLength"
 )
 
 func init() {
 	RegisterTagValidator(maxItemsTagValidator{})
+	RegisterTagValidator(minPropertiesTagValidator{})
 	RegisterTagValidator(minimumTagValidator{})
 	RegisterTagValidator(maxLengthTagValidator{})
 }
@@ -143,6 +145,60 @@ func (mitv maxItemsTagValidator) Docs() TagDoc {
 		Payloads: []TagPayloadDoc{{
 			Description: "<non-negative integer>",
 			Docs:        "This list must be no more than X items long.",
+		}},
+		PayloadsType:     codetags.ValueTypeInt,
+		PayloadsRequired: true,
+	}
+}
+
+type minPropertiesTagValidator struct{}
+
+func (minPropertiesTagValidator) Init(_ Config) {}
+
+func (minPropertiesTagValidator) TagName() string {
+	return minPropertiesTagName
+}
+
+var minPropertiesTagValidScopes = sets.New(
+	ScopeType,
+	ScopeField,
+	ScopeListVal,
+	ScopeMapVal,
+)
+
+func (minPropertiesTagValidator) ValidScopes() sets.Set[Scope] {
+	return minPropertiesTagValidScopes
+}
+
+var minPropertiesValidator = types.Name{Package: libValidationPkg, Name: "MinProperties"}
+
+func (minPropertiesTagValidator) GetValidations(context Context, tag codetags.Tag) (Validations, error) {
+	var result Validations
+
+	if t := util.NativeType(context.Type); t.Kind != types.Map {
+		return Validations{}, fmt.Errorf("can only be used on map types (%s)", rootTypeString(context.Type, t))
+	}
+
+	intVal, err := util.ParseInt(tag.Value)
+	if err != nil {
+		return result, fmt.Errorf("failed to parse tag payload as int: %w", err)
+	}
+	if intVal < 0 {
+		return result, fmt.Errorf("must be greater than or equal to zero")
+	}
+	result.AddFunction(Function(minPropertiesTagName, DefaultFlags, minPropertiesValidator, intVal))
+	return result, nil
+}
+
+func (mptv minPropertiesTagValidator) Docs() TagDoc {
+	return TagDoc{
+		Tag:            mptv.TagName(),
+		StabilityLevel: Beta,
+		Scopes:         sets.List(mptv.ValidScopes()),
+		Description:    "Indicates that a map has a minimum number of properties.",
+		Payloads: []TagPayloadDoc{{
+			Description: "<non-negative integer>",
+			Docs:        "This map must have at least X properties (keys).",
 		}},
 		PayloadsType:     codetags.ValueTypeInt,
 		PayloadsRequired: true,
