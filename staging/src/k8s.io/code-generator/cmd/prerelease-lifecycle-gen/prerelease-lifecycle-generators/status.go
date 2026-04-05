@@ -374,7 +374,7 @@ func (g *genPreleaseLifecycle) Imports(c *generator.Context) (imports []string) 
 }
 
 var (
-	isGAVersionRegex = regexp.MustCompile(`^v\d+$`)
+	isBetaVersionRegex = regexp.MustCompile(`^v\d+beta\d+$`)
 )
 
 func (g *genPreleaseLifecycle) argsFromType(c *generator.Context, t *types.Type) (generator.Args, error) {
@@ -387,10 +387,10 @@ func (g *genPreleaseLifecycle) argsFromType(c *generator.Context, t *types.Type)
 	}
 
 	// Take version from package last segment.
-	// Use heuristic to determine whether the package is GA or prerelease.
-	// If the package is GA, the version matches the format vN where N is a number.
+	// Use heuristic to determine whether the package is beta.
+	// If the package is beta, the version matches the format vNbetaM.
 	version := path.Base(t.Name.Package)
-	isGAVersion := isGAVersionRegex.MatchString(version)
+	isBetaVersion := isBetaVersionRegex.MatchString(version)
 
 	a = a.
 		With("introducedMajor", introducedMajor).
@@ -410,7 +410,7 @@ func (g *genPreleaseLifecycle) argsFromType(c *generator.Context, t *types.Type)
 		}
 	}
 
-	if !isGAVersion || hasDeprecated {
+	if isBetaVersion || hasDeprecated {
 		a = a.
 			With("deprecatedMajor", deprecatedMajor).
 			With("deprecatedMinor", deprecatedMinor)
@@ -427,7 +427,7 @@ func (g *genPreleaseLifecycle) argsFromType(c *generator.Context, t *types.Type)
 		}
 	}
 
-	if !isGAVersion || hasRemoved {
+	if isBetaVersion || hasRemoved {
 		a = a.
 			With("removedMajor", removedMajor).
 			With("removedMinor", removedMinor)
